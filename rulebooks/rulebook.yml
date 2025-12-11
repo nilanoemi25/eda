@@ -1,0 +1,28 @@
+---
+# 1. Define the Source of Events
+# The source is a sequence of numbers from the ansible.eda.range plugin.
+- name: Source for range event
+  hosts: all
+  sources:
+    - ansible.eda.range:
+        limit: 30 # Sets the maximum value for the index 'i'
+        delay: 1 # Time (in seconds) between generating each event
+
+# 2. Define the Rulebook
+- name: Check for index 27
+  hosts: all
+  rules:
+    - name: Print debug message at index 27
+      # The condition to match against the generated event
+      condition: event.i == 27 
+      action:
+        # The action to take when the condition is met
+        debug:
+          msg: "I am learning to write a rulebook as a part of training"
+
+    - name: Default action for other numbers
+      condition: true # This rule runs for all other events
+      action:
+        # Action to observe the flow (optional)
+        debug:
+          msg: "Current index is {{ event.i }}"
