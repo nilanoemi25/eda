@@ -1,0 +1,8 @@
+---
+- name: Hello World Test for Linux
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Say Hello
+      ansible.builtin.debug:
+        msg: "Hello from Linux EC2! Connection successful."
