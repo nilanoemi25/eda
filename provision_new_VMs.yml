@@ -1,0 +1,83 @@
+---
+- name: Dynamic AWS Provisioning via Controller Credentials
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    # We only hardcode non-secret infrastructure details
+    aws_region: "eu-north-1"
+    target_vpc_name: "rhn-support-nlovei"
+    instance_name: "rhn-support-nlovei-prov"
+    instance_type: "t3.nano"
+    
+    # Port list for our loop
+    firewall_ports:
+      - { port: 22, desc: "SSH" }
+      - { port: 80, desc: "HTTP" }
+
+  tasks:
+    # 1. Find VPC (Auth is handled automatically by the environment)
+    - name: Find VPC ID
+      amazon.aws.ec2_vpc_net_info:
+        region: "{{ aws_region }}"
+        filters:
+          "tag:Name": "{{ target_vpc_name }}"
+      register: vpc_info
+
+    # 2. Search for the latest Amazon Linux 2023 Image
+    - name: Find latest AL2023 AMI
+      amazon.aws.ec2_ami_info:
+        region: "{{ aws_region }}"
+        owners: ["amazon"]
+        filters:
+          name: "al2023-ami-2023*-kernel-6.1-x86_64"
+      register: ami_search
+
+    # 3. Find subnets in that VPC
+    - name: Find Subnets
+      amazon.aws.ec2_vpc_subnet_info:
+        region: "{{ aws_region }}"
+        filters:
+          vpc-id: "{{ vpc_info.vpcs[0].id }}"
+      register: subnet_info
+
+    # 4. Process Data with Jinja
+    - name: Set Provisioning Facts
+      set_fact:
+        resolved_vpc_id: "{{ vpc_info.vpcs[0].id }}"
+        resolved_ami_id: "{{ (ami_search.images | sort(attribute='creation_date', reverse=True) | first).image_id }}"
+        resolved_subnet_id: "{{ subnet_info.subnets[0].id }}"
+
+    # 5. Create Security Group (Looping through ports)
+    - name: Create Security Group
+      amazon.aws.ec2_security_group:
+        region: "{{ aws_region }}"
+        name: "{{ instance_name }}-sg"
+        description: "Rules for {{ instance_name }}"
+        vpc_id: "{{ resolved_vpc_id }}"
+        rules:
+          - proto: tcp
+            from_port: "{{ item.port }}"
+            to_port: "{{ item.port }}"
+            cidr_ip: "0.0.0.0/0"
+      loop: "{{ firewall_ports }}"
+      register: sg_result
+
+    # 6. Provision Instance
+    - name: Launch EC2 Instance
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        name: "{{ instance_name }}"
+        image_id: "{{ resolved_ami_id }}"
+        instance_type: "{{ instance_type }}"
+        vpc_subnet_id: "{{ resolved_subnet_id }}"
+        security_group: "{{ sg_result.results[0].group_id }}"
+        wait: yes
+        network:
+          assign_public_ip: true
+      register: ec2_final
+
+    - name: Output Result
+      debug:
+        msg: "Server is live at IP: {{ ec2_final.instances[0].public_ip_address }}"
