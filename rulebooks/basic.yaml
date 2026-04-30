@@ -1,0 +1,12 @@
+---
+- name: Webhook Test
+  hosts: all
+  sources:
+    - ansible.eda.webhook:
+        port: 5000
+  rules:
+    - name: Say Hello
+      condition: event.payload is defined
+      action:
+        debug:
+          msg: "External event received!"
