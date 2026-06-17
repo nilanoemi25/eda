@@ -1,0 +1,9 @@
+---
+- name: Gather facts and print IP address
+  hosts: all
+  gather_facts: true  # This must be true to collect facts
+
+  tasks:
+    - name: Print the default IPv4 address
+      ansible.builtin.debug:
+        msg: "The IP address of this machine is {{ ansible_default_ipv4.address }}"
