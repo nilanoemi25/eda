@@ -7,8 +7,8 @@
           - "http://13.62.64.189:8000"
         delay: 1
   rules:
-    - name: Log Chatty Event to Console
-      condition: event.url_check.status == "up"
+    - name: Catch Every Single Ping
+      condition: event.url_check is defined  # <--- Fires on absolutely any response
       action:
         debug:
-          msg: "Event received! Connection to EC2 is healthy."
+          msg: "Boom! We hooked an event from AWS!"
