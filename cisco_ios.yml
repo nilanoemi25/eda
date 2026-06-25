@@ -1,0 +1,14 @@
+---
+- name: Backup Cisco Switch Configuration
+  hosts: cisco_switches
+  gather_facts: false
+
+  tasks:
+    - name: Run show run on the switch
+      cisco.ios.ios_command:
+        commands: show running-config
+      register: config_output
+
+    - name: Display the configuration
+      ansible.builtin.debug:
+        var: config_output.stdout[0]
