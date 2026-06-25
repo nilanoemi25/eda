@@ -2,7 +2,7 @@
 collections:
   - name: cisco.ios
   - name: ansible.netcommon
-    version: >= 8.5.2
+    version: ">= 8.5.2"
   - name: ansible.utils
-    version: >= 3.0.0
+    version: ">= 3.0.0"
   
